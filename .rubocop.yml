@@ -1,0 +1,62 @@
+# The library's own configuration, minus the parts that only mean something in
+# a gem. Two repositories that lint the same code differently teach two styles,
+# and the one people copy from should not be the looser of them.
+AllCops:
+  # The floor the library promises. An example that needs a newer Ruby is an
+  # example somebody cannot run.
+  TargetRubyVersion: 3.1
+  NewCops: enable
+  Exclude:
+    - vendor/**/*
+    - .bundle/**/*
+
+# The house style everywhere else in AceMQ: comments explain why, and a
+# paragraph that earns its place is worth more than a line under 80 columns.
+Layout/LineLength:
+  Max: 96
+
+# Double quotes throughout, as in the library: the header names are the wire
+# contract and are quoted the same way in the four other languages, and one
+# rule applied everywhere beats two applied by whether a string happens to
+# interpolate.
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+# An example is one file with a beginning, a middle and an end, and it is meant
+# to be read top to bottom. The counters below measure a quality — a method
+# doing too many things — that a script demonstrating a sequence of things does
+# not have. Extracting `step_three` out of a forty-line script to satisfy a
+# number would make the example harder to follow, which is the only thing an
+# example is for.
+#
+# The library itself keeps every one of these, and that is the right place for
+# them: it is code people depend on rather than code people read once.
+Metrics/AbcSize:
+  Enabled: false
+Metrics/BlockLength:
+  Enabled: false
+Metrics/CyclomaticComplexity:
+  Enabled: false
+Metrics/MethodLength:
+  Enabled: false
+Metrics/PerceivedComplexity:
+  Enabled: false
+
+# Every example ends in `main.rb`, which is the name CI looks for.
+Naming/FileName:
+  Enabled: false
+
+# `puts` is how an example says what it did. There is no logger here on
+# purpose: a logger would be one more thing between the reader and the point.
+Style/StderrPuts:
+  Enabled: false
+
+# Most of what these print is a small fixed-width table, and `%-20s %s` next to
+# the two values it formats is easier to check than `%<content_type>-20s
+# %<payload>s` next to the hash that names them. Annotated tokens earn their
+# keep in a format string reused with different arguments, which is not what
+# any of these are.
+Style/FormatStringToken:
+  Enabled: false

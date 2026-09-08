@@ -1,0 +1,159 @@
+# Every example is run against a real broker on every push.
+#
+# This is the whole reason the repository can be trusted. Examples rot: the
+# library moves on, the example does not, and a newcomer's first experience is
+# a stack trace. Running them here turns that into a red build instead.
+#
+# An example that merely loads would prove almost nothing, so each one ends by
+# checking what it claimed — the attempt counter reached three, the duplicate
+# was charged once, the delayed message actually waited — and exits non-zero
+# when it did not. A run of this workflow is fifteen small integration tests
+# that happen to be readable.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The library can change without this repository changing at all, and the
+  # Gemfile resolves it from `main` rather than from a pinned release, so these
+  # examples are also run on a schedule. A Monday failure here is how we find
+  # out that the library broke something the documentation still claims.
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  examples:
+    name: run the examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          # The floor the library promises. An example that needs a newer Ruby
+          # is an example somebody cannot run, and this is the version that
+          # catches it: the conditional pins in the Gemfile exist because
+          # opentelemetry-api and google-protobuf have both raised their floors
+          # past 3.1 since.
+          ruby-version: '3.1'
+          # No lock file is committed — see the Gemfile — so there is nothing
+          # to cache a resolution against. `bundler-cache` would try.
+          bundler-cache: false
+
+      - name: Install
+        run: bundle install --jobs 4
+
+      - name: Lint
+        # Zero offences. The examples are what people copy, so the style they
+        # are written in is the style they spread.
+        run: bundle exec rubocop
+
+      - name: Start the brokers
+        # The same script a contributor runs, so a clean local run and a clean
+        # CI run cannot disagree about how the TLS broker is configured. It
+        # writes the development certificates with the library's own generator
+        # and brings both brokers up with compose.
+        run: ./etc/tls-broker.sh
+
+      - name: Run every example
+        env:
+          # No trailing slash. bunny reads `amqp://host:port/` as a request for
+          # the vhost named by the empty string and answers
+          # "NOT_ALLOWED - vhost  not found", which is a confusing way to spend
+          # twenty minutes.
+          ACEMQ_URL: amqp://guest:guest@localhost:5672
+          ACEMQ_TLS_URL: amqps://guest:guest@localhost:5671
+          ACEMQ_TLS_CA: certs/ca.crt
+        run: |
+          set -o pipefail
+          failed=""
+          # Every directory holding a main.rb, found rather than listed, so an
+          # example added without touching this file is still run.
+          for dir in $(find basic intermediate advanced -name main.rb -exec dirname {} \; | sort); do
+            echo "::group::$dir"
+            if ! bundle exec ruby "$dir/main.rb"; then
+              failed="$failed $dir"
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "$failed" ]; then
+            echo "::error::these examples failed:$failed"
+            exit 1
+          fi
+
+      - name: Check every example actually ran
+        # A find that matched nothing would make the step above pass having run
+        # nothing at all, which is the quiet way a suite stops testing.
+        run: |
+          count=$(find basic intermediate advanced -name main.rb | wc -l | tr -d ' ')
+          echo "$count examples"
+          if [ "$count" -lt 12 ]; then
+            echo "::error::found only $count examples; expected at least 12"
+            exit 1
+          fi
+
+      - name: Check every example has a README
+        # An example nobody can read is an example nobody runs.
+        run: |
+          missing=""
+          for dir in $(find basic intermediate advanced -name main.rb -exec dirname {} \;); do
+            [ -f "$dir/README.md" ] || missing="$missing $dir"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::these examples have no README:$missing"
+            exit 1
+          fi
+
+      - name: What the brokers said, if anything went wrong
+        if: failure()
+        run: docker compose --profile tls logs --tail 200
+
+  published-gem:
+    name: the published gem still installs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+
+      # The examples resolve the library from `main`, because the published
+      # 0.3.0 predates more than half of what they demonstrate. That is
+      # written down in the Gemfile, and this job is what stops it being
+      # written down and then forgotten: it installs the released gem from
+      # AceMQ's static feed on every run, so the day a release carries all of
+      # this is a day somebody notices.
+      #
+      # It deliberately does not run the examples against it. They would fail,
+      # and a job that is expected to fail teaches nobody anything.
+      - name: Install the released gem from https://acemq.org/gems
+        run: |
+          gem install acemq-amqp --source https://acemq.org/gems --no-document
+          ruby -e 'require "acemq/amqp"; puts "installed #{AceMQ::AMQP::VERSION} from the feed"'
+
+      - name: Say what it is still missing
+        run: |
+          missing=""
+          for file in patterns/saga patterns/scheduler codec/yaml codec/toml codec/xml \
+                      codec/protobuf codec/avro crypto dev_certificates \
+                      telemetry/open_telemetry; do
+            ruby -e "require 'acemq/amqp'; require 'acemq/amqp/$file'" 2>/dev/null ||
+              missing="$missing $file"
+          done
+          if [ -n "$missing" ]; then
+            echo "the released gem does not yet carry:$missing"
+            echo "the Gemfile resolves the library from main for exactly this reason"
+          else
+            echo "::notice::the released gem now carries everything these examples use."
+            echo "::notice::the Gemfile can go back to the feed — see the comment in it."
+          fi

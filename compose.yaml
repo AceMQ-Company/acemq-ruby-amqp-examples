@@ -1,0 +1,61 @@
+# A broker for the examples. Plain AMQP on 5672, and TLS on 5671 for the one
+# example that needs it.
+#
+# The TLS listener is not configured here because it cannot be: it needs
+# certificates, and the certificates are written by the library. Run
+# `./etc/tls-broker.sh`, which writes them into `certs/` and then brings this
+# file up with the `tls` profile — the broker reads what was written, and the
+# other services stay exactly as they are for everybody who never touches TLS.
+services:
+  broker:
+    image: rabbitmq:4-alpine
+    environment:
+      # RabbitMQ writes its Erlang cookie under HOME, and the default in this
+      # image is not writable on every Docker setup. Pointing it at /tmp is the
+      # difference between a broker that starts and one that dies with an
+      # "eacces" nobody can interpret.
+      HOME: /tmp
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      # A TCP connect is not enough: Docker publishes the port before RabbitMQ
+      # is listening, so a connection then succeeds and is immediately reset.
+      # This asks the broker itself.
+      #
+      # HOME is named again here, and not with the value above. The diagnostic
+      # reaches the server over Erlang distribution and authenticates with the
+      # cookie under HOME — but it runs as root while the server runs as
+      # `rabbitmq`, so it has to be pointed at the server's home rather than at
+      # root's. Left alone it reads a different cookie, every ping is answered
+      # "Invalid challenge reply", and the container never becomes healthy
+      # while serving traffic perfectly well.
+      test: ["CMD-SHELL", "HOME=/var/lib/rabbitmq rabbitmq-diagnostics -q ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 24
+
+  broker-tls:
+    profiles: ["tls"]
+    image: rabbitmq:4-alpine
+    environment:
+      HOME: /tmp
+    ports:
+      # 5671 only. Its rabbitmq.conf keeps a plaintext listener as well, but
+      # publishing that too would collide with the broker above, and the two
+      # are separate brokers with separate state rather than one with two
+      # doors.
+      - "5671:5671"
+    volumes:
+      # `/certs` is the path the generated rabbitmq.conf names, because that is
+      # what DevelopmentCertificates writes by default and what the Go and .NET
+      # generators write too. Read-only: the broker has no reason to change a
+      # private key, and a container that cannot is one fewer way to be
+      # surprised.
+      - ./certs:/certs:ro
+      - ./certs/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "HOME=/var/lib/rabbitmq rabbitmq-diagnostics -q ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 24

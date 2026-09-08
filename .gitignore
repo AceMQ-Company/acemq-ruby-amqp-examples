@@ -1,0 +1,18 @@
+.bundle/
+vendor/bundle/
+
+# Deliberately not committed. The Gemfile resolves the library from a branch
+# rather than from a released version, so a lock file here would pin a commit
+# and CI would run that commit for ever — which is exactly the drift these
+# examples exist to catch. Resolving afresh is what makes a weekly build tell
+# us something.
+Gemfile.lock
+
+# Written by the TLS example and by etc/tls-broker.sh. Short-lived development
+# certificates, and private keys besides; nothing here belongs in a repository.
+certs/
+*.crt
+*.key
+*.pem
+
+.DS_Store
