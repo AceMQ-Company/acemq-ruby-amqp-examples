@@ -14,4 +14,8 @@ certs/
 *.key
 *.pem
 
+# The claim-check store, written and removed by intermediate/08-claim-check. It
+# is here for the run that fails before it gets to the removing.
+intermediate/08-claim-check/payloads/
+
 .DS_Store

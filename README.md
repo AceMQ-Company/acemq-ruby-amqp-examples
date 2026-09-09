@@ -11,8 +11,8 @@ front of you, with no shared helpers to trace.
 
 Each one also **checks what it claimed** and exits non-zero when it did not —
 the attempt counter reached three, the duplicate was charged once, the delayed
-message actually waited. So a run of this repository is fifteen small
-integration tests that happen to be readable, rather than fifteen scripts that
+message actually waited. So a run of this repository is sixteen small
+integration tests that happen to be readable, rather than sixteen scripts that
 print something and succeed.
 
 ## Running one
@@ -60,6 +60,7 @@ generator and brings the broker up from them.
 | [05-binary-codecs](intermediate/05-binary-codecs) | Protobuf and Avro on one queue, and a schema that changed underneath a consumer without breaking it. |
 | [06-saga](intermediate/06-saga) | Three steps that changed the world, a fourth that failed, and the first three undone in reverse. |
 | [07-scheduling](intermediate/07-scheduling) | A message delivered later, with no scheduler process and no plugin. |
+| [08-claim-check](intermediate/08-claim-check) | Half a megabyte put in a store and 39 bytes on the wire, with the small invoice still travelling whole. |
 
 ### advanced
 
