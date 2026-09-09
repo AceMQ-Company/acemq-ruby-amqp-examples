@@ -11,8 +11,8 @@ front of you, with no shared helpers to trace.
 
 Each one also **checks what it claimed** and exits non-zero when it did not —
 the attempt counter reached three, the duplicate was charged once, the delayed
-message actually waited. So a run of this repository is sixteen small
-integration tests that happen to be readable, rather than sixteen scripts that
+message actually waited. So a run of this repository is twenty small
+integration tests that happen to be readable, rather than twenty scripts that
 print something and succeed.
 
 ## Running one
@@ -48,6 +48,8 @@ generator and brings the broker up from them.
 | [03-topology-and-drift](basic/03-topology-and-drift) | A topology printed before it is applied, and a broker refusing a service that disagrees about a queue. |
 | [04-codecs](basic/04-codecs) | JSON, YAML, TOML and XML read off one queue, which is what a format migration looks like. |
 | [05-replay](basic/05-replay) | Dead letters put back once the fix is out — some of them, in stages, on attempt one. |
+| [06-streams](basic/06-streams) | Six readings written once and read three times, from three different places. |
+| [07-pipelines](basic/07-pipelines) | An order carried through three services by an itinerary, and a failed run resumed where it stopped. |
 
 ### intermediate
 
@@ -61,6 +63,8 @@ generator and brings the broker up from them.
 | [06-saga](intermediate/06-saga) | Three steps that changed the world, a fourth that failed, and the first three undone in reverse. |
 | [07-scheduling](intermediate/07-scheduling) | A message delivered later, with no scheduler process and no plugin. |
 | [08-claim-check](intermediate/08-claim-check) | Half a megabyte put in a store and 39 bytes on the wire, with the small invoice still travelling whole. |
+| [09-consumer-groups](intermediate/09-consumer-groups) | Four slow invoices, handled four times faster by four consumers than by one. |
+| [10-schema-evolution](intermediate/10-schema-evolution) | Two services on two versions of one schema, talking to each other anyway. |
 
 ### advanced
 

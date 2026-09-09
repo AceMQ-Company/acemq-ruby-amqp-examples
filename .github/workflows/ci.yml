@@ -7,7 +7,7 @@
 # An example that merely loads would prove almost nothing, so each one ends by
 # checking what it claimed — the attempt counter reached three, the duplicate
 # was charged once, the delayed message actually waited — and exits non-zero
-# when it did not. A run of this workflow is fifteen small integration tests
+# when it did not. A run of this workflow is twenty small integration tests
 # that happen to be readable.
 name: ci
 
@@ -96,8 +96,8 @@ jobs:
         run: |
           count=$(find basic intermediate advanced -name main.rb | wc -l | tr -d ' ')
           echo "$count examples"
-          if [ "$count" -lt 12 ]; then
-            echo "::error::found only $count examples; expected at least 12"
+          if [ "$count" -lt 20 ]; then
+            echo "::error::found only $count examples; expected at least 20"
             exit 1
           fi
 

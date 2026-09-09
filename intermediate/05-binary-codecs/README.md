@@ -34,7 +34,10 @@ registered schema versions: 1
 field; the consumer's does, with a default. The writer's schema travelled as an
 identifier, the registry resolved it, and the field was filled in — which is
 the whole of what schema evolution needs and the only reason a registry is
-worth running. A field the reader does not know is skipped the same way.
+worth running. A field the reader does not know is skipped the same way —
+[`intermediate/10-schema-evolution`](../10-schema-evolution) is that half, which
+is the direction that reaches production first: a producer redeployed onto a new
+schema while its consumers are still on the old one.
 
 **The protobuf message comes back as `Reading`, not as a Hash.** The class is
 the schema, so there is nothing to convert it to. Publishing anything else
