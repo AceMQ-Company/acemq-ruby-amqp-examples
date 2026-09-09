@@ -94,28 +94,33 @@ something.
 at <https://acemq.org/gems>, which is a directory tree over HTTPS and needs no
 account and no credential — one `source` line is the whole of what a user does.
 
-**These examples do not resolve it from there**, and the reason is written into
-the [Gemfile](Gemfile) at length. The published 0.3.0 predates the sagas, the
+The [Gemfile](Gemfile) resolves `acemq-amqp` from that feed, `~> 0.5`, so every
+example here runs against exactly what the documentation tells you to depend
+on. For a while it could not: the published 0.3.0 predated the sagas, the
 scheduler, the YAML, TOML, XML, Protobuf and Avro codecs, the encrypted bodies,
 the development certificates and the OpenTelemetry adapter — more than half of
-what is demonstrated here. Pinning to it would leave most of this repository
-unrunnable, and an example that cannot be run is worth very little. So the
-Gemfile resolves the library from `main`, and these examples show what it does
-today rather than what it did at the last release.
+what is demonstrated here — so the Gemfile resolved the library's `main` branch
+instead, because an example that cannot be run is worth very little. 0.5.0
+carries all of it, and that arrangement is over.
 
-The `published-gem` job in CI installs from the feed on every run and prints
-what the release is still missing, so the day the Gemfile can go back to it is
-a day somebody notices rather than one that has to be remembered.
+The `published-gem` job in CI installs the gem the other way round, with
+`gem install --source https://acemq.org/gems` rather than through Bundler.
+The two read a static feed differently, and it is the command the library's
+README gives a reader, so it is worth running even though the examples already
+prove Bundler's path.
 
 `ACEMQ_RUBY_AMQP=../acemq-ruby-amqp bundle install` points it at a local
 checkout instead, which is how a change to the library is tried against these
 examples before it is pushed anywhere.
 
-**There is no `Gemfile.lock` here, on purpose.** A lock would pin a commit of
-the library, and CI would then run that commit for ever — which is exactly the
-drift these examples exist to catch. Resolving afresh is what makes a Monday
-build tell us something. The cost is that pins a lock would have supplied have
-to be written down in the Gemfile instead, and two of them are.
+**There is no `Gemfile.lock` here, on purpose.** A lock would pin the exact
+version of the library and of everything under it, and CI would then run that
+resolution for ever — so a release that broke an example, or a dependency that
+raised its Ruby floor, would go unnoticed until somebody happened to unpin.
+That is exactly the drift these examples exist to catch. Resolving afresh is
+what makes a Monday build tell us something. The cost is that pins a lock would
+have supplied have to be written down in the Gemfile instead, and two of them
+are.
 
 ## Requirements
 

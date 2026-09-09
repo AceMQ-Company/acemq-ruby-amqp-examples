@@ -10,32 +10,24 @@ source "https://rubygems.org"
 # needs no account and no credential — `source` below is the whole of what a
 # user does, and it is what the library's README tells them to do.
 #
-# These examples do not resolve it from there, and it is worth saying plainly
-# why. The published 0.3.0 predates the sagas, the scheduler, the YAML, TOML,
-# XML, Protobuf and Avro codecs, the encrypted bodies, the development
-# certificates and the OpenTelemetry adapter — which is to say, more than half
-# of what is demonstrated here. Pinning to it would leave most of this
-# repository unrunnable, and an example that cannot be run is worth very little.
-# So the default source is the library's `main`, and these examples show what
-# the library does today rather than what it did at the last release.
-#
-# When a release carries all of it, this becomes:
-#
-#   source "https://acemq.org/gems" do
-#     gem "acemq-amqp", "~> 0.4"
-#   end
-#
-# and the examples go back to resolving exactly what the documentation tells
-# you to depend on. The `published-gem` job in CI already installs from the
-# feed on every run, so the day that swap becomes possible is a day somebody
-# notices rather than one that has to be remembered.
+# For a while these examples did not resolve it from there. The published
+# 0.3.0 predated the sagas, the scheduler, the YAML, TOML, XML, Protobuf and
+# Avro codecs, the encrypted bodies, the development certificates and the
+# OpenTelemetry adapter — more than half of what is demonstrated here — so the
+# default source was the library's `main` branch, because an example that
+# cannot be run is worth very little. 0.5.0 carries every one of them, and the
+# examples resolve exactly what the documentation tells you to depend on.
 #
 # ACEMQ_RUBY_AMQP points at a local checkout, which is how the library's own
-# changes are tried against these examples before they are pushed anywhere.
+# changes are tried against these examples before they are pushed anywhere. It
+# stays: the swap above closed the gap between the release and `main`, and this
+# is what keeps a future one from opening unnoticed.
 if (checkout = ENV.fetch("ACEMQ_RUBY_AMQP", nil))
   gem "acemq-amqp", path: checkout
 else
-  gem "acemq-amqp", git: "https://github.com/AceMQ-Company/acemq-ruby-amqp.git", branch: "main"
+  source "https://acemq.org/gems" do
+    gem "acemq-amqp", "~> 0.5"
+  end
 end
 
 # ---------------------------------------------------------------------------

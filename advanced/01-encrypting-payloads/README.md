@@ -68,11 +68,14 @@ rather than being refused by a codec that knows it cannot help.
 
 ## A body that will not open is parked, not retried
 
-`DecodeError` is a `FatalError`, so a message this codec cannot open goes to
+A body that will not decode never reaches a handler at all, so the consumer
+settles it itself: a message this codec cannot open goes to
 `medical.records.parked` rather than round the retry loop — nothing about it
-will be different next time. A message that failed five times and a message
-nothing could read are different problems, and mixing them means somebody
-sorts them by hand.
+will be different next time. Parked and not dead-lettered, and that is the
+point. A message that failed five times, one a handler rejected, and one
+nothing could read are three different problems; `.dlq` holds the first two
+and `.parked` holds the last, so whoever drains a dead-letter queue is not
+sorting them by hand.
 
 ## What still needs a decision from you
 

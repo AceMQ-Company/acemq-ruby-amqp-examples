@@ -68,9 +68,11 @@ puts
 
 # Tampering. The header is the cipher's associated data and the tag covers the
 # ciphertext, so a single altered byte anywhere makes the message fail to open.
-# A DecodeError is a FatalError, so a message like this goes to
-# `#{QUEUE}.parked` rather than round the retry loop: nothing about it will be
-# different next time.
+# A body that will not decode never reaches the handler, so the consumer
+# settles it itself: a message like this goes to `#{QUEUE}.parked` rather than
+# round the retry loop, because nothing about it will be different next time.
+# Parked rather than dead-lettered — a message nothing could read is not the
+# same problem as one that failed five times.
 altered = body.dup
 altered.setbyte(altered.bytesize - 1, altered.getbyte(altered.bytesize - 1) ^ 0x01)
 tampered = nil

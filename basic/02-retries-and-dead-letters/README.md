@@ -16,9 +16,12 @@ written down.
 - **`FatalError` skips the remaining attempts.** It is how a handler says "this
   will not work next time either" without having to know how many attempts are
   left.
-- **A dead letter carries why.** That is the entire value of dead-lettering
-  rather than rejecting: a rejected message lands somewhere with nothing saying
-  what happened to it.
+- **A dead letter carries why.** `rejected by the handler: …` and `gave up
+  after 3 attempts: …` are different sentences and both travel on the message.
+  That is the value of dead-lettering rather than answering the broker with a
+  bare `basic.reject`, which drops the message somewhere with nothing at all
+  saying what happened to it. `Ack.reject` is not that: it is a handler saying
+  "this one is not processable", and it writes its reason down.
 
 ## Running it
 

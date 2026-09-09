@@ -83,18 +83,20 @@ consumer.cancel
 puts "deliveries   #{seen.sort.inspect}"
 puts "schedule     #{POLICY.schedule.inspect}  (seconds, before jitter)"
 
-# Both messages should now be on the dead-letter queue, with the reason the
-# handler gave written into the envelope. That reason is the entire value of
-# dead-lettering rather than rejecting: a rejected message lands somewhere with
-# nothing saying why.
-parked = []
+# Both messages should now be on the dead-letter queue, with the reason written
+# into the envelope. That reason is the entire value of dead-lettering rather
+# than answering the broker with a bare `basic.reject`, which drops the message
+# somewhere with nothing at all saying what happened to it. `Ack.reject` is a
+# different thing and carries its reason too — it is how a handler says "this
+# one is not processable", and it is the sentence on the first line below.
+dead_letters = []
 while (delivery = mq.pull(DEAD_LETTERS))
   envelope = Envelope.from_headers(delivery.headers, delivery.routing_key)
-  parked << envelope
+  dead_letters << envelope
   delivery.ack
 end
 
-parked.sort_by { |e| e.headers.to_s }.each do |envelope|
+dead_letters.sort_by { |e| e.headers.to_s }.each do |envelope|
   puts "dead letter  attempt #{envelope.attempt}: #{envelope.error}"
 end
 
@@ -108,5 +110,5 @@ abort "expected 4 deliveries, got #{seen.size}" unless seen.size == 4
 unless seen.sort == [1, 1, 2, 3]
   abort "expected attempts [1, 1, 2, 3], got #{seen.sort.inspect}"
 end
-abort "expected 2 dead letters, got #{parked.size}" unless parked.size == 2
-abort "a dead letter arrived without a reason" if parked.any? { |e| e.error.empty? }
+abort "expected 2 dead letters, got #{dead_letters.size}" unless dead_letters.size == 2
+abort "a dead letter arrived without a reason" if dead_letters.any? { |e| e.error.empty? }
