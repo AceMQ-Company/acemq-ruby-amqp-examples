@@ -32,11 +32,10 @@ health after cancelling the consumer: degraded
   1 of 1 consumers has stopped
 
 metrics:
-  acemq_messages_consumed{queue="warehouse.picks"} 3
-  acemq_messages_accepted{queue="warehouse.picks"} 2
-  acemq_messages_rejected{queue="warehouse.picks"} 1
-  acemq_messages_dead_lettered{queue="warehouse.picks"} 1
-  acemq_messages_published{exchange="warehouse-events"} 3
+  acemq_consume_total{outcome="acked",queue="warehouse.picks"} 2
+  acemq_consume_total{outcome="rejected",queue="warehouse.picks"} 1
+  acemq_consume_duration_count{outcome="acked",queue="warehouse.picks"} 2
+  acemq_publish_total{exchange="warehouse-events",outcome="confirmed"} 3
   ...
 
 spans:

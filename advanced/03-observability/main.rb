@@ -151,11 +151,16 @@ abort "expected 3 messages, got #{seen}" unless seen == 3
 abort "the health report was not up: #{healthy.status}" unless healthy.up?
 abort "a stopped consumer should be degraded, not #{stopped.status}" unless stopped.degraded?
 
-published = metrics.counts.find { |key, _| key.to_s.start_with?("acemq.messages.published") }
+published = metrics.counts.find { |key, _| key.to_s.start_with?("acemq.publish.total") }
 abort "nothing was counted as published" unless published && published.last >= 3
 
-dead = metrics.counts.find { |key, _| key.to_s.start_with?("acemq.messages.dead.lettered") }
-abort "the rejected pick was not counted as dead-lettered" unless dead && dead.last == 1
+# A handler's rejection is reported as rejected, not dead_lettered: the message
+# still lands in the dead-letter queue, but a decision and an exhausted retry
+# policy are different events and the outcome tag keeps them apart.
+rejected = metrics.counts.find do |key, _|
+  key.to_s.start_with?("acemq.consume.total") && key.to_s.include?("rejected")
+end
+abort "the rejected pick was not counted" unless rejected && rejected.last == 1
 
 abort "no spans were recorded" if recorded.empty?
 abort "no publish span" unless recorded.any? { |span| span.name.end_with?("publish") }
