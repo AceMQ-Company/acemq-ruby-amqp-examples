@@ -22,11 +22,24 @@ source "https://rubygems.org"
 # changes are tried against these examples before they are pushed anywhere. It
 # stays: the swap above closed the gap between the release and `main`, and this
 # is what keeps a future one from opening unnoticed.
+#
+# The floor moves with each release even though it does not have to. `~>` is
+# pessimistic on the major, so `~> 0.5` and `~> 0.7` have the same ceiling and
+# both resolve the newest 0.x the feed carries — this repository commits no
+# lock file, so that is what every run gets either way. What the floor does is
+# record which release the examples were actually run against, and with no
+# lock file it is the only place that record lives. Left at 0.5 it would claim
+# these examples work against a release nothing has run them against since;
+# 0.7.0 changed what `close` does with its time and what a blocked connection
+# reports, so that claim is not free. It also decides the failure a reader
+# gets when something else in their bundle holds the version down: a
+# resolution error naming the version, rather than an older library behaving
+# quietly differently.
 if (checkout = ENV.fetch("ACEMQ_RUBY_AMQP", nil))
   gem "acemq-amqp", path: checkout
 else
   source "https://acemq.org/gems" do
-    gem "acemq-amqp", "~> 0.5"
+    gem "acemq-amqp", "~> 0.7"
   end
 end
 

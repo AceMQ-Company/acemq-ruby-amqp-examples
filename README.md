@@ -99,7 +99,7 @@ something.
 at <https://acemq.org/gems>, which is a directory tree over HTTPS and needs no
 account and no credential — one `source` line is the whole of what a user does.
 
-The [Gemfile](Gemfile) resolves `acemq-amqp` from that feed, `~> 0.5`, so every
+The [Gemfile](Gemfile) resolves `acemq-amqp` from that feed, `~> 0.7`, so every
 example here runs against exactly what the documentation tells you to depend
 on. For a while it could not: the published 0.3.0 predated the sagas, the
 scheduler, the YAML, TOML, XML, Protobuf and Avro codecs, the encrypted bodies,
