@@ -163,3 +163,76 @@ jobs:
             exit 1
           fi
           echo "every optional file is in the published gem"
+
+  tracks-the-release:
+    name: the floor is the newest release
+    runs-on: ubuntu-latest
+    # A job of its own rather than another step above, deliberately. A stale
+    # floor and a broken example are different findings and both are worth
+    # having: the examples still run and still report whatever this job
+    # concludes, so a red X here reads as "the recorded version is old", never
+    # as "we have no idea whether any of this works".
+    #
+    # It inherits the workflow's triggers, so it runs on the Monday cron as well
+    # as on push. That is the run it exists for: a release moves underneath this
+    # repository without a commit landing here, and only something on a timer
+    # will ever notice.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The Gemfile floor is the newest released version
+        # Hard failure rather than a warning, and the argument is worth writing
+        # down because the other choice is tempting.
+        #
+        # This repository exists to prove the current release works. Recording an
+        # older one it makes a claim about a version nothing has run these
+        # examples against, and it makes it in a green build -- which is worse
+        # than no check at all, because a green build is read as an answer. Three
+        # of these examples repositories were once found sitting releases behind,
+        # all of them green the whole time.
+        #
+        # The cost of failing hard is real. A library release legitimately lands
+        # before the examples are updated, and during that window this job goes
+        # red on a repository nobody has broken. But that window is precisely the
+        # thing being measured, the fix is a one-line bump, and a warning buried
+        # in a log is what let the drift go unnoticed for releases at a time in
+        # the first place.
+        #
+        # This repository is the one where the check has real teeth rather than
+        # merely bookkeeping value. `~>` is pessimistic on the major, so `~> 0.5`
+        # and `~> 0.7` have the same ceiling and both resolve the newest 0.x the
+        # feed carries -- and no lock file is committed. The examples job would
+        # therefore go on passing against a newer library than the Gemfile
+        # claims, and nothing would say so. The floor is the only written record
+        # of which release these examples were actually run against, and this is
+        # what keeps that record true.
+        #
+        # Compared at major.minor, because major.minor is all a `~>` floor can
+        # express. A patch release cannot be tracked in this file, and asking it
+        # to would fail forever on a difference the Gemfile has no way to record.
+        run: |
+          pinned=$(grep -E 'gem "acemq-amqp", "~> ' Gemfile | head -1 | sed 's/.*~> //; s/".*//')
+          newest=$(git ls-remote --tags https://github.com/AceMQ-Company/acemq-ruby-amqp \
+                     | grep -v '\^{}' | sed 's#.*refs/tags/##' \
+                     | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' \
+                     | sort -V | tail -1)
+          newest_line=$(echo "$newest" | cut -d. -f1,2)
+
+          # An empty answer means the listing failed or the tag naming changed,
+          # and comparing against nothing would pass silently forever.
+          if [ -z "$newest" ]; then
+            echo "::error::no release tags found on acemq-ruby-amqp, so the floor could not be checked"
+            exit 1
+          fi
+          # Also empty if the requirement stops being a `~>` constraint, which is
+          # the record this check reads disappearing.
+          if [ -z "$pinned" ]; then
+            echo "::error::Gemfile has no 'gem \"acemq-amqp\", \"~> <version>\"' line, so the floor could not be checked"
+            exit 1
+          fi
+
+          if [ "$pinned" != "$newest_line" ]; then
+            echo "::error::the Gemfile floors acemq-amqp at ~> $pinned but the newest release is $newest. Edit the acemq-amqp line in Gemfile to \"~> $newest_line\", then run the examples against it."
+            exit 1
+          fi
+          echo "floored at ~> $pinned, and the newest release is $newest"
