@@ -15,6 +15,23 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# No lock file is committed, deliberately — .gitignore says why — and one left
+# on disk from an earlier run is never something anybody chose. Bundler honours
+# it, `bundle install` reports success, and everything from here on runs against
+# whatever release the lock happens to name. Nothing says so: the floor check
+# reads the Gemfile rather than the lock, and the examples pass against an older
+# library just as green as against the current one. A contributor then reports
+# having run the suite against a release they have not run it against.
+#
+# So take it away and resolve afresh. On a runner there is never one to remove,
+# which is the point — a laptop and a runner should not be resolving different
+# libraries from the same Gemfile.
+if [ -f Gemfile.lock ]; then
+  echo "removing a stray Gemfile.lock; this repository resolves afresh every run"
+  rm -f Gemfile.lock
+fi
+bundle install --quiet
+
 echo "writing certificates into certs/"
 bundle exec ruby -e '
   require "acemq/amqp"

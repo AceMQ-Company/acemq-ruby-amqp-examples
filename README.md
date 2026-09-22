@@ -33,6 +33,13 @@ ACEMQ_URL=amqp://guest:guest@broker:5672 bundle exec ruby basic/01-publish-and-c
 vhost named by the empty string and answers `NOT_ALLOWED - vhost  not found`,
 which is a confusing way to spend twenty minutes.
 
+**Delete `Gemfile.lock` before you install.** No lock file is committed — the
+Gemfile says why — so `bundle install` resolves the newest 0.x the feed carries
+every time. A lock left behind by an earlier run pins whatever it named instead,
+and `bundle install` honours it and reports success, so the suite runs against
+an old library and says nothing. `rm -f Gemfile.lock` first, or run
+`./etc/tls-broker.sh`, which does it for you.
+
 One example needs a broker with a TLS listener, and TLS needs certificates that
 cannot be committed. `./etc/tls-broker.sh` writes them with the library's own
 generator and brings the broker up from them.
