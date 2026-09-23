@@ -1,11 +1,17 @@
-# A broker for the examples. Plain AMQP on 5672, and TLS on 5671 for the one
-# example that needs it.
+# Brokers for the examples. Plain AMQP on 5672, TLS on 5671 for the one example
+# that needs it, and a third on 5673 for the one that breaks a broker on purpose.
 #
 # The TLS listener is not configured here because it cannot be: it needs
 # certificates, and the certificates are written by the library. Run
 # `./etc/tls-broker.sh`, which writes them into `certs/` and then brings this
 # file up with the `tls` profile — the broker reads what was written, and the
 # other services stay exactly as they are for everybody who never touches TLS.
+#
+# `blocked-broker` is for advanced/04-blocked-broker, which raises a real memory
+# alarm. An alarm is broker-wide — it stops every connection that publishes, not
+# only the one that asked for it — so that example gets a broker of its own
+# rather than a turn on the shared one. Nothing has to be generated first, so
+# unlike the TLS broker it is not in a profile and comes up with the rest.
 services:
   broker:
     image: rabbitmq:4-alpine
@@ -30,6 +36,26 @@ services:
       # root's. Left alone it reads a different cookie, every ping is answered
       # "Invalid challenge reply", and the container never becomes healthy
       # while serving traffic perfectly well.
+      test: ["CMD-SHELL", "HOME=/var/lib/rabbitmq rabbitmq-diagnostics -q ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 24
+
+  blocked-broker:
+    image: rabbitmq:4-alpine
+    # Named rather than left to compose, which would call it after whatever the
+    # checkout directory happens to be. advanced/04 raises the alarm by running
+    # `rabbitmqctl` inside this container, so the name is something the example
+    # has to be able to write down — and `ACEMQ_BLOCKED_CONTAINER` is how a
+    # different one is named without editing the example.
+    container_name: acemq-ruby-examples-blocked-broker
+    environment:
+      HOME: /tmp
+    ports:
+      # 5673, because 5672 is the shared broker's and the point of this one is
+      # that it is not the shared broker.
+      - "5673:5672"
+    healthcheck:
       test: ["CMD-SHELL", "HOME=/var/lib/rabbitmq rabbitmq-diagnostics -q ping"]
       interval: 5s
       timeout: 10s

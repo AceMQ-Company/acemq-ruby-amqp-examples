@@ -11,9 +11,9 @@ front of you, with no shared helpers to trace.
 
 Each one also **checks what it claimed** and exits non-zero when it did not —
 the attempt counter reached three, the duplicate was charged once, the delayed
-message actually waited. So a run of this repository is twenty small
-integration tests that happen to be readable, rather than twenty scripts that
-print something and succeed.
+message actually waited, the blocked connection still reported itself up. So a
+run of this repository is twenty-one small integration tests that happen to be
+readable, rather than twenty-one scripts that print something and succeed.
 
 ## Running one
 
@@ -43,6 +43,12 @@ an old library and says nothing. `rm -f Gemfile.lock` first, or run
 One example needs a broker with a TLS listener, and TLS needs certificates that
 cannot be committed. `./etc/tls-broker.sh` writes them with the library's own
 generator and brings the broker up from them.
+
+**[04-blocked-broker](advanced/04-blocked-broker) has a broker to itself**, on
+5673, and `docker compose up -d --wait` brings it up with the rest. It raises a
+genuine memory alarm with `rabbitmqctl set_vm_memory_high_watermark 0`, and an
+alarm is broker-wide: on the shared broker it would stop every other example
+publishing as well. It puts the watermark back in an `ensure`.
 
 ## What is here
 
@@ -80,6 +86,7 @@ generator and brings the broker up from them.
 | [01-encrypting-payloads](advanced/01-encrypting-payloads) | Message bodies the broker cannot read, and a keyring that rotates without a flag day. |
 | [02-development-certificates](advanced/02-development-certificates) | TLS against a private authority, and the marker that stops a development certificate reaching production. |
 | [03-observability](advanced/03-observability) | Prometheus metrics, a health report that proves a round trip, and spans that join across the broker. |
+| [04-blocked-broker](advanced/04-blocked-broker) | A real memory alarm, and a connection that reports `up` in microseconds rather than `down` in seconds. |
 
 ## The three worth reading even if you never run them
 

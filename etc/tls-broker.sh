@@ -53,3 +53,7 @@ docker compose --profile tls up -d --wait
 echo
 echo "plain AMQP  amqp://guest:guest@localhost:5672"
 echo "TLS         amqps://guest:guest@localhost:5671   (certs/ca.crt)"
+# A third broker, for advanced/04-blocked-broker. It raises a real memory alarm,
+# and an alarm stops every connection on the broker that publishes — so it gets
+# one of its own instead of a turn on the one above.
+echo "blockable   amqp://guest:guest@localhost:5673   (advanced/04 only)"

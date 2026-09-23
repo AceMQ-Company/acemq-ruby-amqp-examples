@@ -6,9 +6,9 @@
 #
 # An example that merely loads would prove almost nothing, so each one ends by
 # checking what it claimed — the attempt counter reached three, the duplicate
-# was charged once, the delayed message actually waited — and exits non-zero
-# when it did not. A run of this workflow is twenty small integration tests
-# that happen to be readable.
+# was charged once, the delayed message actually waited, the blocked connection
+# still reported itself up — and exits non-zero when it did not. A run of this
+# workflow is twenty-one small integration tests that happen to be readable.
 name: ci
 
 on:
@@ -61,7 +61,9 @@ jobs:
         # The same script a contributor runs, so a clean local run and a clean
         # CI run cannot disagree about how the TLS broker is configured. It
         # writes the development certificates with the library's own generator
-        # and brings both brokers up with compose.
+        # and brings all three brokers up with compose — including the one
+        # advanced/04 is allowed to wreck, which is why it is a third broker and
+        # not a turn on the shared one.
         run: ./etc/tls-broker.sh
 
       - name: Run every example
@@ -73,6 +75,12 @@ jobs:
           ACEMQ_URL: amqp://guest:guest@localhost:5672
           ACEMQ_TLS_URL: amqps://guest:guest@localhost:5671
           ACEMQ_TLS_CA: certs/ca.crt
+          # advanced/04 blocks this one with a real memory alarm, and reaches it
+          # with `rabbitmqctl` inside the container — so the container name is
+          # named here as well as the URL, rather than left to a default that
+          # compose could rename underneath the example.
+          ACEMQ_BLOCKED_URL: amqp://guest:guest@localhost:5673
+          ACEMQ_BLOCKED_CONTAINER: acemq-ruby-examples-blocked-broker
         run: |
           set -o pipefail
           failed=""
@@ -96,8 +104,8 @@ jobs:
         run: |
           count=$(find basic intermediate advanced -name main.rb | wc -l | tr -d ' ')
           echo "$count examples"
-          if [ "$count" -lt 20 ]; then
-            echo "::error::found only $count examples; expected at least 20"
+          if [ "$count" -lt 21 ]; then
+            echo "::error::found only $count examples; expected at least 21"
             exit 1
           fi
 
