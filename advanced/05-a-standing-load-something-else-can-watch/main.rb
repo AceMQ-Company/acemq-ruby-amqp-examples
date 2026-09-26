@@ -94,6 +94,8 @@ stopping = false
 # come down, and the flag is how they agree to.
 %w[INT TERM].each { |sig| Signal.trap(sig) { stopping = true } }
 
+seen_errors = []
+
 publisher = Thread.new do
   number = 0
   interval = 1.0 / [RATE, 1].max
@@ -108,9 +110,19 @@ publisher = Thread.new do
       # running.
       Timeout.timeout(5) { mq.publish({ "pick_id" => "o-#{number}" }, to: QUEUE) }
       bump.call(:confirmed)
-    rescue StandardError
+    rescue StandardError => e
       # Counted rather than hidden, and not fatal: a standing load reports what
       # happened to it and keeps going.
+      #
+      # The first of each kind is also named on stderr. A load that fails every
+      # publish and says only "failed: 45525" is a poor witness: it proves something
+      # is wrong and gives nobody the error to go and look up. Rate-limited to one
+      # line per class, because the alternative under a real fault is tens of
+      # thousands of identical lines in the timeline a drill is trying to read.
+      unless seen_errors.include?(e.class.name)
+        seen_errors << e.class.name
+        warn "publish failed with #{e.class}: #{e.message}"
+      end
       #
       # A Timeout::Error is the expected one while the connection is blocked -- a
       # send that never completed is a fact about the run, and `blocked` on the same
