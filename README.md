@@ -87,6 +87,7 @@ publishing as well. It puts the watermark back in an `ensure`.
 | [02-development-certificates](advanced/02-development-certificates) | TLS against a private authority, and the marker that stops a development certificate reaching production. |
 | [03-observability](advanced/03-observability) | Prometheus metrics, a health report that proves a round trip, and spans that join across the broker. |
 | [04-blocked-broker](advanced/04-blocked-broker) | A real memory alarm, and a connection that reports `up` in microseconds rather than `down` in seconds. |
+| [05-a-standing-load-something-else-can-watch](advanced/05-a-standing-load-something-else-can-watch) | A load that does not finish, printing one JSON reading per second — so a fault drill can read what the client saw rather than what the broker did. |
 
 ## The three worth reading even if you never run them
 

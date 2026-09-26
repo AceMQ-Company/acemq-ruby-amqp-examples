@@ -104,8 +104,8 @@ jobs:
         run: |
           count=$(find basic intermediate advanced -name main.rb | wc -l | tr -d ' ')
           echo "$count examples"
-          if [ "$count" -lt 21 ]; then
-            echo "::error::found only $count examples; expected at least 21"
+          if [ "$count" -lt 22 ]; then
+            echo "::error::found only $count examples; expected at least 22"
             exit 1
           fi
 
