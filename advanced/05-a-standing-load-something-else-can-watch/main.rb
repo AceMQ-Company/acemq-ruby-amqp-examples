@@ -34,10 +34,11 @@
 # a fault drill that file is the client's testimony, and `tail -n 60` on it is how
 # the drill asks.
 #
-# It stops on Ctrl-C, or after ACEMQ_EXAMPLE_SECONDS if that is set — which CI sets,
-# because a load with no reason to stop is not a failing example there, it is a job
-# that never ends. Unset, it runs until interrupted, which is what a drill campaign
-# wants.
+# It stops on Ctrl-C, or after ACEMQ_EXAMPLE_SECONDS seconds, which defaults to 60.
+# Set ACEMQ_EXAMPLE_SECONDS=0 to run until interrupted — what a drill campaign wants.
+# The default is bounded rather than endless because CI runs every example here with no
+# arguments and waits: an endless one is not a failing example, it is a job that runs to
+# the six-hour ceiling and is cancelled.
 #
 # What to watch under a fault: `published` and `confirmed` moving apart, `blocked`
 # turning true with the broker's reason beside it, and both counters moving again
@@ -63,9 +64,17 @@ QUEUE = "warehouse.standing-load"
 RATE = Integer(ENV.fetch("ACEMQ_LOAD_RATE", "200"))
 INTERVAL = Float(ENV.fetch("ACEMQ_LOAD_INTERVAL", "1"))
 
-# Bounded in CI, where every example is run with no arguments and nothing is standing
-# by to interrupt one.
-RUN_FOR = Integer(ENV.fetch("ACEMQ_EXAMPLE_SECONDS", "0"))
+# How long to run when nobody said: a minute, not for ever.
+#
+# That default is deliberate. CI runs every example in this repository with no
+# arguments and waits for each to finish, so an unbounded default is not a failing
+# example -- it is a job that runs to the six-hour ceiling and is then cancelled. That
+# happened, in three repositories at once, and cost about eighteen hours of runner time
+# before anybody looked.
+#
+# So a forgotten setting gives a short run, and "until interrupted" has to be asked
+# for: ACEMQ_EXAMPLE_SECONDS=0, which is what a drill campaign passes.
+RUN_FOR = Integer(ENV.fetch("ACEMQ_EXAMPLE_SECONDS", "60"))
 
 # Logs go to stderr so that stdout carries nothing but readings. A reader skips
 # whatever is not a JSON object, so mixing them would work — and it would also mean
