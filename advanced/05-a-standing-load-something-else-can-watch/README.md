@@ -71,6 +71,25 @@ for tidiness: a reader looking for `confirmed` and finding `acked` sees a client
 reporting nothing, which is indistinguishable from a well-behaved client on a quiet
 cluster.
 
+## When a publish fails, it says why
+
+The first failure of each kind is named on stderr:
+
+```
+publish failed with AceMQ::AMQP::PublishError: cannot publish message ... :
+  the connection is being recovered and its channels are not open yet ...
+```
+
+Rate-limited to one line per exception class, because the alternative under a real
+fault is tens of thousands of identical lines in the middle of the timeline something
+is trying to read.
+
+This was added because it was needed. A drill found this library failing every publish
+after a broker node restarted, and the load reported only `failed: 45525` — enough to
+prove something was wrong and not enough to say what. The exception class and message
+are what turned that into a fixed bug (`acemq-amqp` 0.7.2). A load that hides why it
+failed is a poor witness.
+
 ## On the achieved rate
 
 Each publish is awaited before the next is offered, so the rate this reaches is lower
