@@ -48,7 +48,6 @@
 # frozen_string_literal: true
 
 require "json"
-require "timeout"
 require "acemq/amqp"
 
 include AceMQ::AMQP # rubocop:disable Style/MixinUsage -- an example reads better unqualified
@@ -112,12 +111,30 @@ publisher = Thread.new do
     number += 1
     bump.call(:published)
     begin
-      # A publish on a blocked connection does not raise — it waits, because the
-      # broker has stopped reading the socket. Timeout::timeout is what makes a
-      # reading arrive anyway: without it the sampler would wait with the publish,
-      # and a client that went quiet looks exactly like a client that was never
-      # running.
-      Timeout.timeout(5) { mq.publish({ "pick_id" => "o-#{number}" }, to: QUEUE) }
+      # NOT wrapped in Timeout.timeout, and it was until 2026-10-02.
+      #
+      # The reasoning for the timeout was that a publish on a blocked connection waits
+      # rather than raising, so without one "the sampler would wait with the publish".
+      # That was wrong twice. The sampler runs on the main thread, not this one, so a
+      # stuck publish never delayed a reading; and `blocked?`, the one call the sampler
+      # makes into the connection, takes its own small lock rather than the publishing
+      # channel's, so it does not queue behind a publish either.
+      #
+      # What the timeout did instead was leak memory. Timeout.timeout raises
+      # *asynchronously*, and this library publishes under the publishing channel's
+      # mutex (see Transport's PublishPermits comment) — so the exception lands
+      # part-way through encoding a body and writing a frame, abandoning both. The
+      # soak measured it: 240 forced recoveries took this load from 44MB to 210MB while
+      # the other four languages stayed flat. Bisected with
+      # scripts/ruby/thread_leak_probe.rb, where the growth per recovery is +0.56MB with
+      # the timeout and +0.12MB without it, and the Ruby object heap barely moves in
+      # either case — the retained memory is native, which is what interrupting an
+      # allocation-heavy path repeatedly produces.
+      #
+      # A publish that blocks for ever is still worth bounding, but not from out here
+      # with an async raise. It belongs in the library, where the write and the
+      # bookkeeping can be bounded together.
+      mq.publish({ "pick_id" => "o-#{number}" }, to: QUEUE)
       bump.call(:confirmed)
     rescue StandardError => e
       # Counted rather than hidden, and not fatal: a standing load reports what
@@ -133,12 +150,11 @@ publisher = Thread.new do
         warn "publish failed with #{e.class}: #{e.message}"
       end
       #
-      # A Timeout::Error is the expected one while the connection is blocked -- a
-      # send that never completed is a fact about the run, and `blocked` on the same
-      # line is what says why. It needs no branch of its own, being a StandardError
-      # like the rest: anything that goes wrong here is counted the same way rather
-      # than ending the load, because a load that stops on the first error stops
-      # being a witness.
+      # Every kind is counted the same way, with no branch of its own: a connection
+      # closed under us during a recovery, a channel that went away, a body that would
+      # not encode. A load that stops on the first error stops being a witness, and
+      # `blocked` on the same reading is what says whether back pressure was the
+      # reason.
       bump.call(:failed)
     end
     sleep interval
