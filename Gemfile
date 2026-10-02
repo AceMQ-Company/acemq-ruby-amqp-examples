@@ -54,16 +54,21 @@ end
 
 # The transport. Nothing connects to a broker without it.
 #
-# A range rather than `~> 2.23`, and 3.x is the one to want: bunny before 3.2 could
-# start overlapping recovery attempts and leave a client permanently disconnected,
-# which is exactly what a node closing every connection before a restart provokes.
-# The standing load in advanced/ is what found it -- forced recoveries every 15s took
-# a bunny 2.24 client from 6 threads to 146 and stopped it consuming altogether, where
-# 3.4 stayed at 6 and published nine times as much.
+# Held at 2.x on purpose, and this was briefly `">= 2.23", "< 4"` on 2026-10-02.
 #
-# Resolution does the right thing per Ruby: 3.x needs Ruby 3.2, so anything newer gets
-# it and a 3.1 runner falls back to 2.24.
-gem "bunny", ">= 2.23", "< 4"
+# bunny 3.2 fixes a real defect of its own: before it, overlapping recovery attempts
+# could leave a client permanently disconnected, which is what a node closing every
+# connection before a restart provokes. Measured with a bunny-only client, 90 forced
+# recoveries: 2.24 went from 6 threads to 146 and stopped consuming at the 40th, while
+# 3.4 held at 6 threads and published nine times as much.
+#
+# It is still the wrong choice here today, because the library has a channel leak of
+# its own that bunny 3.x exposes far faster than 2.x hides it: the standing load
+# reaches ~54 threads by the 12th forced recovery on bunny 3.4, against an onset
+# around the 50th on 2.24. Pointing these examples at 3.x would make the Ruby client
+# visibly worse while that is open, so the pin moves once the leak is fixed and a soak
+# says so. Tracked on the board.
+gem "bunny", "~> 2.23"
 
 # Ruby 4.0 dropped `logger` from the default gems and bunny 2.24 still requires
 # it without declaring it, so bunny will not load on a modern Ruby without this
