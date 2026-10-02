@@ -53,7 +53,17 @@ end
 # and does reach for the codecs — has to say so here.
 
 # The transport. Nothing connects to a broker without it.
-gem "bunny", "~> 2.23"
+#
+# A range rather than `~> 2.23`, and 3.x is the one to want: bunny before 3.2 could
+# start overlapping recovery attempts and leave a client permanently disconnected,
+# which is exactly what a node closing every connection before a restart provokes.
+# The standing load in advanced/ is what found it -- forced recoveries every 15s took
+# a bunny 2.24 client from 6 threads to 146 and stopped it consuming altogether, where
+# 3.4 stayed at 6 and published nine times as much.
+#
+# Resolution does the right thing per Ruby: 3.x needs Ruby 3.2, so anything newer gets
+# it and a 3.1 runner falls back to 2.24.
+gem "bunny", ">= 2.23", "< 4"
 
 # Ruby 4.0 dropped `logger` from the default gems and bunny 2.24 still requires
 # it without declaring it, so bunny will not load on a modern Ruby without this
