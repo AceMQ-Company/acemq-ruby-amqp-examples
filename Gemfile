@@ -54,21 +54,27 @@ end
 
 # The transport. Nothing connects to a broker without it.
 #
-# Held at 2.x on purpose, and this was briefly `">= 2.23", "< 4"` on 2026-10-02.
+# A range rather than a 2.x pin, which took two attempts to get right.
 #
 # bunny 3.2 fixes a real defect of its own: before it, overlapping recovery attempts
 # could leave a client permanently disconnected, which is what a node closing every
-# connection before a restart provokes. Measured with a bunny-only client, 90 forced
-# recoveries: 2.24 went from 6 threads to 146 and stopped consuming at the 40th, while
-# 3.4 held at 6 threads and published nine times as much.
+# connection before a restart provokes. Measured with a bunny-only client over 90
+# forced recoveries, 2.24 went from 6 threads to 146 and stopped consuming at the 40th,
+# while 3.4 held at 6 threads and published nine times as much.
 #
-# It is still the wrong choice here today, because the library has a channel leak of
-# its own that bunny 3.x exposes far faster than 2.x hides it: the standing load
-# reaches ~54 threads by the 12th forced recovery on bunny 3.4, against an onset
-# around the 50th on 2.24. Pointing these examples at 3.x would make the Ruby client
-# visibly worse while that is open, so the pin moves once the leak is fixed and a soak
-# says so. Tracked on the board.
-gem "bunny", "~> 2.23"
+# This was widened on 2026-10-02 on the strength of that alone and reverted the same
+# day, because the library then had a leak of its own that bunny 3.x exposed four times
+# faster than 2.x hid it: the standing load in advanced/ reached about 54 threads by its
+# 12th forced recovery. acemq-amqp 0.7.4 fixes it — a subscription carries a consumer
+# tag of its own, so bunny's topology recorder replaces its record of it instead of
+# accumulating one per recovery — and a 240-cycle soak against 0.7.4 on bunny 3.4 ends
+# with this load at the thread count it started with: 10 to 10, 44MB to 61MB, where
+# 0.7.3 on the identical drill reached 96 threads and 237MB.
+#
+# Resolution does the right thing per Ruby: bunny 3.4 needs Ruby 3.2, and 3.3 needs
+# amq-protocol 2.9 which needs the same, so a 3.1 runner lands on bunny 3.2 and
+# anything newer gets 3.4.
+gem "bunny", ">= 2.23", "< 4"
 
 # Ruby 4.0 dropped `logger` from the default gems and bunny 2.24 still requires
 # it without declaring it, so bunny will not load on a modern Ruby without this
