@@ -37,6 +37,7 @@ before the alarm: up in 4160us
 
 setting the memory high watermark to 0 on acemq-ruby-examples-blocked-broker
 blocked: 0 publishes confirmed since the alarm, and one still waiting
+  publishes refused unsent while blocked so far: 0
 while blocked: up in 97us
   the broker has blocked this connection; publishing is paused: low on memory
   consumers: 0
@@ -98,8 +99,10 @@ its own output explains.
 
 ## The publish runs on a thread
 
-Not for concurrency. A publish on a blocked connection does not raise — it sits
-in `wait_for_confirms` until the broker starts reading the socket again. That is
+Not for concurrency. A publish written just before the block does not raise — it
+sits in `wait_for_confirms` until the broker starts reading the socket again. One
+*made* once the block is known is never written: since acemq-amqp 0.7.5 it raises
+`PublishingPausedError` at once, which the thread counts as refused and carries on. That is
 the state being demonstrated, so the main thread cannot be the one waiting on it.
 The thread is stopped and joined once the alarm is off, before anything else
 touches the connection.

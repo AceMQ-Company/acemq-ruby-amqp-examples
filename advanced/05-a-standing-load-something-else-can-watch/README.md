@@ -46,17 +46,18 @@ three repositories at once.
 ## What it prints
 
 ```json
-{"at":"2026-09-26T19:29:44Z","elapsedMs":4009,"blocked":false,"published":453,"confirmed":452,"consumed":452,"failed":0,"publishRate":59.69,"consumeRate":59.69}
+{"at":"2026-09-26T19:29:44Z","elapsedMs":4009,"blocked":false,"published":453,"confirmed":452,"consumed":452,"failed":0,"refused":0,"publishRate":59.69,"consumeRate":59.69}
 ```
 
 Under a memory alarm the same line reads:
 
 ```json
-{"at":"...","elapsedMs":585642,"blocked":true,"published":59337,"confirmed":59315,"consumed":59315,"failed":21,"reason":"low on memory","publishRate":0.0,"consumeRate":0.0}
+{"at":"...","elapsedMs":585642,"blocked":true,"published":59337,"confirmed":59315,"consumed":59315,"failed":0,"refused":21,"reason":"low on memory","publishRate":0.0,"consumeRate":0.0}
 ```
 
-`confirmed` has stopped moving while `published` keeps climbing, `failed` counts the
-sends that never completed, and `reason` is the broker's own words. None of that is
+`confirmed` has stopped moving while `published` keeps climbing, `refused` counts the
+sends the library declined unsent because the connection was blocked -- back pressure,
+not loss -- and `reason` is the broker's own words. None of that is
 visible to anything that asks the broker how it is doing — the cluster is healthy, and
 this application is not publishing.
 
@@ -68,7 +69,8 @@ this application is not publishing.
 | `published` | sends attempted since the start |
 | `confirmed` | sends the broker has acknowledged |
 | `consumed` | deliveries handled |
-| `failed` | sends that did not complete |
+| `failed` | sends that did not complete, and may have been lost |
+| `refused` | sends declined unsent because the broker had blocked the connection (0.7.5+) |
 | `publishRate` / `consumeRate` | confirms and deliveries per second over the last interval |
 | `reason` | what the broker said when it blocked the connection |
 

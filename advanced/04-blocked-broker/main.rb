@@ -4,8 +4,10 @@
 #
 # RabbitMQ protects itself. Over its memory or disk high watermark it raises an
 # alarm and stops reading from every connection that publishes: `connection.blocked`
-# goes out, and from then on a publish, a declaration, or anything else written to
-# that socket waits. Nothing fails. Nothing arrives either.
+# goes out, and from then on anything already written to that socket waits. Nothing
+# fails. Nothing arrives either. A publish *made* once the block is known is not
+# written at all: since 0.7.5 it raises PublishingPausedError at once, which says
+# nothing was sent and a retry is safe -- the answer Go, .NET and Java give.
 #
 # From this end that is indistinguishable from a broker that has gone away, and
 # the two want opposite responses. A blocked broker is one to wait for; a dead one
@@ -120,18 +122,25 @@ puts
 puts "setting the memory high watermark to 0 on #{CONTAINER}"
 rabbitmqctl("set_vm_memory_high_watermark", "0")
 
-# A thread, because a publish on a blocked connection does not raise — it sits in
-# `wait_for_confirms` until the broker starts reading the socket again. That is
+# A thread, because a publish written just before the block does not raise — it
+# sits in `wait_for_confirms` until the broker starts reading the socket again. That is
 # the state being demonstrated, so it cannot also be something the main thread
 # waits on. The thread is stopped and joined below, once the alarm is off.
 confirmed = Thread::Queue.new
+refused = Thread::Queue.new
 stop = false
 publishing = Thread.new do
   40.times do |n|
     break if stop
 
-    mq.publish({ "pick_id" => "during the alarm #{n}" }, to: QUEUE)
-    confirmed << n
+    begin
+      mq.publish({ "pick_id" => "during the alarm #{n}" }, to: QUEUE)
+      confirmed << n
+    rescue AceMQ::AMQP::PublishingPausedError
+      # Declined unsent because the block was already known: back pressure, not a
+      # loss, so the thread carries on and tries again once the broker reads.
+      refused << n
+    end
     sleep 0.2
   end
 rescue StandardError => e
@@ -150,6 +159,7 @@ begin
   end
 
   puts "blocked: #{confirmed.size} publishes confirmed since the alarm, and one still waiting"
+  puts "  publishes refused unsent while blocked so far: #{refused.size}"
   during, during_us = timed_health(mq)
   show("while blocked", during, during_us)
 ensure

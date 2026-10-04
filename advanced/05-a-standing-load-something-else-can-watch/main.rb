@@ -21,7 +21,8 @@
 #   published    sends attempted since the start
 #   confirmed    sends the broker has acknowledged
 #   consumed     deliveries handled
-#   failed       sends that failed
+#   failed       sends that failed, and may have been lost
+#   refused      sends declined unsent because the broker had blocked the connection
 #   publishRate  confirms per second over the last interval
 #   consumeRate  deliveries per second over the last interval
 #
@@ -88,7 +89,8 @@ mq.declare_queue(QUEUE)
 # and the sampler on this one. Ruby's GVL makes a torn read unlikely rather than
 # impossible, and "unlikely" is not a property to leave in a program whose whole
 # output is numbers somebody will reason about.
-counts = { published: 0, confirmed: 0, consumed: 0, failed: 0 }
+counts = { published: 0, confirmed: 0, consumed: 0, failed: 0, refused: 0 }
+
 lock = Mutex.new
 bump = ->(key) { lock.synchronize { counts[key] += 1 } }
 
@@ -150,12 +152,13 @@ publisher = Thread.new do
         warn "publish failed with #{e.class}: #{e.message}"
       end
       #
-      # Every kind is counted the same way, with no branch of its own: a connection
+      # One branch only: a send the library declined unsent on a blocked connection is
+      # `refused`, as Go and Java count it. Everything else is `failed`: a connection
       # closed under us during a recovery, a channel that went away, a body that would
       # not encode. A load that stops on the first error stops being a witness, and
       # `blocked` on the same reading is what says whether back pressure was the
       # reason.
-      bump.call(:failed)
+      bump.call(e.is_a?(AceMQ::AMQP::PublishingPausedError) ? :refused : :failed)
     end
     sleep interval
   end
@@ -178,7 +181,8 @@ emit = lambda do
     "published" => snapshot[:published],
     "confirmed" => snapshot[:confirmed],
     "consumed" => snapshot[:consumed],
-    "failed" => snapshot[:failed]
+    "failed" => snapshot[:failed],
+    "refused" => snapshot[:refused]
   }
   reason = mq.blocked_reason
   reading["reason"] = reason if reason
