@@ -39,7 +39,7 @@ if (checkout = ENV.fetch("ACEMQ_RUBY_AMQP", nil))
   gem "acemq-amqp", path: checkout
 else
   source "https://acemq.org/gems" do
-    gem "acemq-amqp", "~> 0.7", ">= 0.7.5"
+    gem "acemq-amqp", "~> 0.7", ">= 0.7.6"
   end
 end
 

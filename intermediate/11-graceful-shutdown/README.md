@@ -1,7 +1,6 @@
 # Graceful shutdown
 
-A shutdown that waits for the handler in hand — and, in 0.7.5, goes on waiting
-past the deadline it was given.
+A shutdown that waits for the handler in hand, and gives up at its deadline.
 
 ```bash
 bundle exec ruby intermediate/11-graceful-shutdown/main.rb
@@ -10,64 +9,68 @@ bundle exec ruby intermediate/11-graceful-shutdown/main.rb
 ## What to look for
 
 ```
-enough time  close took 1.5s and returned
-not enough   close(timeout: 0.5) took 1.5s and returned
+enough time   close took 3.00s and returned
+not enough    close(timeout: 0.5) took 0.51s and raised
+              the drain did not finish within 0.5s: 1 delivery was left unsettled and will be redelivered — rb-shutdown-jobs (1)
+              {"job":"J-2"} came back, redelivered=true
+three busy    close(timeout: 0.5) took 0.50s and raised
+              the drain did not finish within 0.5s: 3 deliveries were left unsettled and will be redelivered — rb-shutdown-jobs (3)
+              {"job":"J-3"} came back, redelivered=true
+              {"job":"J-4"} came back, redelivered=true
+              {"job":"J-5"} came back, redelivered=true
 
 what the handlers got to:
   J-1  started
   J-1  finished
   J-2  started
+  J-3  started
+  J-4  started
+  J-5  started
   J-2  finished
+  J-3  finished
+  J-4  finished
+  J-5  finished
 
-left on the queue for the next reader: nothing
+left on the queue: 0, dead-lettered: 0
 ```
 
-**`enough time … close took 1.5s and returned`.** `Connection#close` is not a
+**`enough time … close took 3.00s and returned`.** `Connection#close` is not a
 socket close with a consumer attached. It cancels every subscription first, so
 nothing new is delivered, then waits for the handlers already running, and only
 then shuts the socket. J-1 was being worked on when close was called, and it was
 finished and acknowledged rather than handed back to the broker for somebody else
-to redo. That is the half of a graceful shutdown that works as documented.
+to redo. The default deadline is twenty seconds; a three-second job fits.
 
-**`not enough … close(timeout: 0.5) took 1.5s and returned`.** The other half,
-and the line that is wrong. A deadline shorter than the handler is supposed to
-end the wait: close stops waiting, shuts the socket anyway, and raises
-`Connection::DrainTimeout` afterwards, whose `stranded` says how many deliveries
-each queue was left holding. Here close waited the whole job out, J-2 finished,
-and nothing was raised.
+**`not enough … took 0.51s and raised`.** A deadline shorter than the handler
+ends the wait. Close stops waiting, shuts the socket anyway, and raises
+`Connection::DrainTimeout` afterwards. Its `stranded` is a count per queue —
+`{"rb-shutdown-jobs" => 1}` here — and its `timeout` is the deadline that
+expired. J-2 was never acknowledged, so the broker hands it to the next reader
+with `redelivered=true`.
 
-## Why the deadline is not honoured in 0.7.5
+**`three busy … took 0.50s and raised`.** Three consumers on one connection, each
+in the middle of a job. Every one is stopped first and then all are waited for
+against **one** deadline, so close takes half a second, not three halves. A wait
+spent per consumer is not a bound a process can be held to: eight consumers at
+twenty seconds each is nearly three minutes, and no orchestrator waits that long.
 
-The drain stops a consumer with bunny's `basic_cancel`. When the last consumer on
-a channel is cancelled, bunny shuts that channel's consumer work pool and **waits
-for the busy worker** — up to the pool's shutdown timeout, which the library
-leaves at bunny's default of sixty seconds. That wait happens inside the cancel,
-before the library's own deadline is consulted, so in practice:
+**`J-2 finished` after the close returned.** A handler still running at the
+deadline is not killed — Ruby has no safe way to stop a thread mid-transaction —
+so it runs to the end in this process. What it returns is thrown away: no ack,
+retry, dead letter or park, because the broker already has the message back and
+settling it as well would be the same message twice. Hence nothing left on the
+queue and nothing dead-lettered. Deliveries bunny had received but no handler
+had started are not started once the drain begins; they go back with the
+channel.
 
-- **A handler shorter than sixty seconds is always waited for**, whatever
-  `timeout:` says. `close(timeout: 0)`, documented as not waiting at all, waits
-  too.
-- **The wait is per consumer.** Several busy consumers cost up to sixty seconds
-  each, one after the other — the four-minute shutdown that the single shared
-  deadline was written to prevent.
-- **Past sixty seconds** close does raise `DrainTimeout` and the job is
-  redelivered, but the handler is not stopped: bunny has already given up on its
-  pool, so the thread runs on, orphaned, until it finishes or the process exits.
-  Measured against 0.7.5 with a 63-second job and `timeout: 0.5`: close took
-  60.5s, raised, and the job came back with `redelivered=true`.
+The example checks each of these claims itself and exits non-zero, naming the
+one that broke, if any does not hold.
 
-With Kubernetes' default thirty-second grace period that means a slow handler is
-SIGKILLed in the middle of a close that was asked to give up at twenty. The job
-is still redelivered, because it was never acknowledged — so nothing is lost —
-but the `DrainTimeout` an operator would alert on is never raised.
+Up to 0.7.5 the deadline was not honoured against a real broker: bunny waited for
+the busy handler, for up to sixty seconds per consumer, before the drain looked
+at its clock.
 
-**The example asserts what 0.7.5 does.** When a release makes the drain honour
-its deadline, the second close starts raising and this example fails on purpose,
-saying so. It then wants rewriting to show the outcome the API promises — the
-exception, its `stranded` count, and J-2 coming back redelivered — rather than
-going on describing a library that no longer exists.
-
-## The shape a service wants anyway
+## The shape a service wants
 
 ```ruby
 stop = Thread::Queue.new
@@ -84,8 +87,8 @@ The default is twenty because the number that matters is the one that will kill
 the process: Kubernetes waits `terminationGracePeriodSeconds`, thirty unless
 changed, before SIGKILL. Twenty inside thirty leaves room for the web server and
 for the process to exit, so the drain loses the race to your own log line rather
-than to the orchestrator. Until the deadline is honoured, keep handlers well under
-the grace period — that is the bound actually in force.
+than to the orchestrator. Raise it for handlers that genuinely take longer, and
+raise the grace period with it.
 
 `DrainTimeout` is raised rather than logged because a drain that reports success
 having abandoned work is how an operator whose grace period is too short never
@@ -93,12 +96,12 @@ finds out. It is the line worth alerting on.
 
 ## Redelivery is the backstop
 
-Whatever a handler was holding when the process died was never acknowledged, so
-the broker gives it to the next reader. The work may be done twice, which is the
-ordinary at-least-once case and costs nothing when the handler is idempotent —
-[`intermediate/02`](../02-idempotent-consumer) is that argument. A graceful
-shutdown reduces duplicates; it does not eliminate them. A power cut has no
-SIGTERM.
+Whatever a handler was holding when the deadline passed, or when the process
+died, was never acknowledged, so the broker gives it to the next reader. The work
+may be done twice, which is the ordinary at-least-once case and costs nothing
+when the handler is idempotent — [`intermediate/02`](../02-idempotent-consumer)
+is that argument. A graceful shutdown reduces duplicates; it does not eliminate
+them. A power cut has no SIGTERM.
 
 ## Compared with Java
 
