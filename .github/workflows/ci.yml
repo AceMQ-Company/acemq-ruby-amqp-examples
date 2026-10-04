@@ -8,7 +8,7 @@
 # checking what it claimed — the attempt counter reached three, the duplicate
 # was charged once, the delayed message actually waited, the blocked connection
 # still reported itself up — and exits non-zero when it did not. A run of this
-# workflow is twenty-one small integration tests that happen to be readable.
+# workflow is twenty-three small integration tests that happen to be readable.
 name: ci
 
 on:
@@ -104,8 +104,8 @@ jobs:
         run: |
           count=$(find basic intermediate advanced -name main.rb | wc -l | tr -d ' ')
           echo "$count examples"
-          if [ "$count" -lt 22 ]; then
-            echo "::error::found only $count examples; expected at least 22"
+          if [ "$count" -lt 23 ]; then
+            echo "::error::found only $count examples; expected at least 23"
             exit 1
           fi
 

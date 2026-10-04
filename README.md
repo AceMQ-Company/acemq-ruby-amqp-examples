@@ -12,8 +12,8 @@ front of you, with no shared helpers to trace.
 Each one also **checks what it claimed** and exits non-zero when it did not —
 the attempt counter reached three, the duplicate was charged once, the delayed
 message actually waited, the blocked connection still reported itself up. So a
-run of this repository is twenty-one small integration tests that happen to be
-readable, rather than twenty-one scripts that print something and succeed.
+run of this repository is twenty-three small integration tests that happen to be
+readable, rather than twenty-three scripts that print something and succeed.
 
 ## Running one
 
@@ -78,6 +78,7 @@ publishing as well. It puts the watermark back in an `ensure`.
 | [08-claim-check](intermediate/08-claim-check) | Half a megabyte put in a store and 39 bytes on the wire, with the small invoice still travelling whole. |
 | [09-consumer-groups](intermediate/09-consumer-groups) | Four slow invoices, handled four times faster by four consumers than by one. |
 | [10-schema-evolution](intermediate/10-schema-evolution) | Two services on two versions of one schema, talking to each other anyway. |
+| [11-graceful-shutdown](intermediate/11-graceful-shutdown) | A shutdown that waits for the handler in hand, and one that ran out of time. |
 
 ### advanced
 
