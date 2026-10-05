@@ -12,8 +12,8 @@ front of you, with no shared helpers to trace.
 Each one also **checks what it claimed** and exits non-zero when it did not —
 the attempt counter reached three, the duplicate was charged once, the delayed
 message actually waited, the blocked connection still reported itself up. So a
-run of this repository is twenty-three small integration tests that happen to be
-readable, rather than twenty-three scripts that print something and succeed.
+run of this repository is twenty-four small integration tests that happen to be
+readable, rather than twenty-four scripts that print something and succeed.
 
 ## Running one
 
@@ -89,6 +89,16 @@ publishing as well. It puts the watermark back in an `ensure`.
 | [03-observability](advanced/03-observability) | Prometheus metrics, a health report that proves a round trip, and spans that join across the broker. |
 | [04-blocked-broker](advanced/04-blocked-broker) | A real memory alarm, and a connection that reports `up` in microseconds rather than `down` in seconds. |
 | [05-a-standing-load-something-else-can-watch](advanced/05-a-standing-load-something-else-can-watch) | A load that does not finish, printing one JSON reading per second — so a fault drill can read what the client saw rather than what the broker did. |
+
+### apps
+
+Several services and several patterns at once, which is where libraries
+quietly diverge. Each is a port of the Java app of the same name, with the same
+contracts and the same checks.
+
+| | |
+|---|---|
+| [01-order-fulfilment](apps/01-order-fulfilment) | Five services, one broker, no shared database: an outbox, an idempotent charge, a retry ladder and a timeline built from one correlation id. |
 
 ## The three worth reading even if you never run them
 

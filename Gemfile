@@ -86,6 +86,11 @@ gem "logger", "~> 1.6"
 # Bundler process does not get it for free. XMLCodec needs it.
 gem "rexml", "~> 3.3"
 
+# apps/01-order-fulfilment gives the gateway and payments a database each, for
+# the SQL outbox and the SQL idempotency store. Bundler picks the newest build
+# whose Ruby range fits: 2.9 needs 3.2, so a 3.1 runner lands on 2.8.
+gem "sqlite3", "~> 2.1"
+
 # AvroCodec, and avro's own dependency. multi_json 1.20 raised its floor to
 # Ruby 3.2 and 1.17 does not work with the json gem Ruby 4 ships, so it is
 # pinned only where it has to be rather than everywhere.
