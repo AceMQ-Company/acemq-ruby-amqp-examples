@@ -12,8 +12,8 @@ front of you, with no shared helpers to trace.
 Each one also **checks what it claimed** and exits non-zero when it did not —
 the attempt counter reached three, the duplicate was charged once, the delayed
 message actually waited, the blocked connection still reported itself up. So a
-run of this repository is twenty-four small integration tests that happen to be
-readable, rather than twenty-four scripts that print something and succeed.
+run of this repository is twenty-six small integration tests that happen to be
+readable, rather than twenty-six scripts that print something and succeed.
 
 ## Running one
 
@@ -99,6 +99,8 @@ contracts and the same checks.
 | | |
 |---|---|
 | [01-order-fulfilment](apps/01-order-fulfilment) | Five services, one broker, no shared database: an outbox, an idempotent charge, a retry ladder and a timeline built from one correlation id. |
+| [02-policy-administration](apps/02-policy-administration) | A modular monolith: one process, six modules, one database, and still only events between them — an outbox, a described pipeline, a claim check, an idempotent premium and a question asked over the broker. |
+| [03-ledger](apps/03-ledger) | Event sourcing on a stream: the journal is the system of record, balances are rebuilt from it, and projections read all of history without competing. |
 
 ## The three worth reading even if you never run them
 

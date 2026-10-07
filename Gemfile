@@ -87,7 +87,8 @@ gem "logger", "~> 1.6"
 gem "rexml", "~> 3.3"
 
 # apps/01-order-fulfilment gives the gateway and payments a database each, for
-# the SQL outbox and the SQL idempotency store. Bundler picks the newest build
+# the SQL outbox and the SQL idempotency store; apps/02-policy-administration
+# gives its six modules one between them. Bundler picks the newest build
 # whose Ruby range fits: 2.9 needs 3.2, so a 3.1 runner lands on 2.8.
 gem "sqlite3", "~> 2.1"
 
