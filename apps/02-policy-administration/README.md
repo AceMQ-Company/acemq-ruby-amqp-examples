@@ -129,11 +129,11 @@ weeks later by someone asking where the audit trail went. The `audit` queue
 exists because of that failure, and so does the flag.
 
 **The outbox relay used to lose exactly that kind of message.** It is not the
-caller's publish, so the caller cannot pass the flag, and until the fix in
-`acemq-ruby-amqp` (unreleased at the time of writing; 0.7.10 still has it) it
-published without it: a record nothing was bound to was confirmed, dropped and
-marked published. Writing this application is what found it. Every record here
-is routable, so the run passes on 0.7.10 either way; the fix keeps an unroutable
+caller's publish, so the caller cannot pass the flag, and until
+`acemq-ruby-amqp` 0.7.11 it published without it: a record nothing was bound to
+was confirmed, dropped and marked published. Writing this application is what
+found it. Every record here is routable, so the run passed on 0.7.10 as well,
+and these examples now require 0.7.11; the fix keeps an unroutable
 record in the outbox, counts the attempt, and tells `on_error:` — what Java's
 and .NET's relays already did.
 
