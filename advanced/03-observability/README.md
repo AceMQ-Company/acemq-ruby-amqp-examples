@@ -35,7 +35,8 @@ metrics:
   acemq_consume_total{outcome="acked",queue="warehouse.picks"} 2
   acemq_consume_total{outcome="rejected",queue="warehouse.picks"} 1
   acemq_consume_duration_count{outcome="acked",queue="warehouse.picks"} 2
-  acemq_publish_total{exchange="warehouse-events",outcome="confirmed"} 3
+  acemq_publish_total{exchange="warehouse-events",message_type="pick.requested.v1",outcome="confirmed",routing_key="pick.requested"} 3
+  acemq_publish_duration_count{exchange="warehouse-events",message_type="pick.requested.v1",outcome="confirmed",routing_key="pick.requested"} 3
   ...
 
 spans:
