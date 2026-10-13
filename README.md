@@ -176,6 +176,36 @@ since a `find` that matches nothing would otherwise pass having run nothing at
 all. It also fails on an example directory with no `README.md`, because an
 example nobody can read is an example nobody runs.
 
+## Versions
+
+This repository has no releases of its own. It tracks [acemq-ruby-amqp](https://github.com/AceMQ-Company/acemq-ruby-amqp),
+moving the pin in `Gemfile` in a commit of its own whenever the library
+releases. A tag records that the examples were verified against one library
+release:
+
+| Tag | On |
+|---|---|
+| `examples-v<library version>`, e.g. `examples-v0.7.14` | the commit whose `Gemfile` pins that release, once CI has passed on it |
+| `examples-v<library version>-r<n>`, e.g. `examples-v0.7.14-r2` | a later commit worth picking up at the same release, such as a fix to an example or its README; the highest `n` wins |
+
+The `examples-` prefix keeps these apart from the library's own `vX.Y.Z`
+releases, which they would otherwise look like and are not.
+
+Tags are annotated and permanent: one is never moved, re-pointed or deleted,
+because [acemq-tutorials](https://github.com/AceMQ-Company/acemq-tutorials)
+builds its images from them. A tag on the wrong commit is corrected by the next
+revision, not by moving it.
+
+To tag, from an up-to-date `main` whose CI is green:
+
+```bash
+git tag -a examples-v0.7.14 -m "Examples verified against acemq-ruby-amqp 0.7.14"
+git push origin examples-v0.7.14
+```
+
+The tutorials pick up a library release only once its examples tag exists, so
+tagging is the last step of moving the pin.
+
 ## Licence
 
 Apache 2.0. See [LICENSE](LICENSE).
