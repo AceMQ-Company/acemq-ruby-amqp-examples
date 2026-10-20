@@ -120,11 +120,12 @@ ACEMQ_URL=amqp://guest:guest@localhost:5672/ruby-apps bundle exec ruby apps/02-p
 ## Where Ruby differs, and why it matters
 
 **Every publish here says `mandatory: true`.** Java's publishes are mandatory by
-default; Ruby's, like Go's and Python's, are not. Java's README records what
-writing this application found: `claim.settled` and `document.stored` were
+default; Ruby's, like Go's and Python's, became mandatory by default only in
+acemq-ruby-amqp 0.7.16, and the flag stays explicit here. Java's README records
+what writing this application found: `claim.settled` and `document.stored` were
 published with nothing bound to them, and Java refused the publish — "nothing is
-bound to exchange 'policy' for routing key 'policy.claim.settled'". In Ruby,
-without the flag, both would have been confirmed and dropped, and the bug found
+bound to exchange 'policy' for routing key 'policy.claim.settled'". In Ruby
+before 0.7.16, without the flag, both would have been confirmed and dropped, and the bug found
 weeks later by someone asking where the audit trail went. The `audit` queue
 exists because of that failure, and so does the flag.
 
@@ -133,7 +134,7 @@ caller's publish, so the caller cannot pass the flag, and until
 `acemq-ruby-amqp` 0.7.11 it published without it: a record nothing was bound to
 was confirmed, dropped and marked published. Writing this application is what
 found it. Every record here is routable, so the run passed on 0.7.10 as well,
-and these examples now require 0.7.15; the fix keeps an unroutable
+and these examples now require 0.7.16; the fix keeps an unroutable
 record in the outbox, counts the attempt, and tells `on_error:` — what Java's
 and .NET's relays already did.
 

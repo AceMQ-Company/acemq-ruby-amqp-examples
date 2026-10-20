@@ -85,9 +85,9 @@ writer started from nothing but the journal**, and checks:
 
 ## Where Ruby differs
 
-**Publishes say `mandatory: true`**, as Java's do by default; Ruby's do not. An
-entry the broker could not route is an entry the log does not have, and
-without the flag it would be confirmed and dropped.
+**Publishes say `mandatory: true`**, as Java's do by default and Ruby's do from
+0.7.16 on. An entry the broker could not route is an entry the log does not
+have; before 0.7.16, without the flag, it would have been confirmed and dropped.
 
 **The rebuild's "caught up" is a quiet period, as in Java's.** The precise way
 is to read the offset of the last entry before starting and stop there; neither

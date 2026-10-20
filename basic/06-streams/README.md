@@ -66,8 +66,12 @@ second copy for every other consumer to read as well — a projection reading th
 stream would count the message twice. Rejecting is no better: there is no
 dead-letter hop, because there is nothing to remove the message from. A stream
 message that cannot be handled has to be logged, counted or copied somewhere by
-the handler itself, and the stream moves on regardless. That is the trade:
-nothing is lost, and nothing is retried for you.
+the handler itself. A handler that raises **stops the reader** at that message
+(the default since acemq-ruby-amqp 0.7.16): nothing after it is handled and
+nothing is copied anywhere, so a reader restarted at that offset sees it again.
+`on_failure: :dead_letter` keeps the old behaviour, a copy in `{stream}.dlq`
+and carry on. That is the trade: nothing is lost, and nothing is retried for
+you.
 
 ## A stream is declared, not converted
 

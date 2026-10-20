@@ -133,9 +133,9 @@ module Policies
     end
 
     # +mandatory: true+ because Java's publishers are mandatory by default and
-    # Ruby's are not: without it an event nothing is bound to is confirmed and
-    # dropped, which is exactly the bug Java's version of this application found
-    # in its own topology. See the README.
+    # Ruby's were not before 0.7.16: without it an event nothing was bound to
+    # was confirmed and dropped, which is exactly the bug Java's version of this
+    # application found in its own topology. See the README.
     def announce(event, routing_key)
       @mq.publish(event.to_wire, to: routing_key, exchange: EXCHANGE, mandatory: true,
                                  type: "UnderwritingDecision",
