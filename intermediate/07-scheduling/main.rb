@@ -76,6 +76,15 @@ while seen.size < 3 && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadlin
   end
 end
 
+# The scheduler counts a delivery when the broker confirms it, and the broker
+# can hand the message to the consumer above before that confirm gets back. So
+# the third arrival can come a moment before the third count; nothing is lost,
+# every message has already arrived, so give the count a moment to catch up.
+counted = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+while scheduler.delivered < 3 && Process.clock_gettime(Process::CLOCK_MONOTONIC) < counted
+  sleep 0.01
+end
+
 puts "scheduled #{scheduler.scheduled}, delivered #{scheduler.delivered}, " \
      "hops #{scheduler.hops}"
 puts
